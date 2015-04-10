@@ -3,6 +3,7 @@ from configparser import ConfigParser
 import ast
 import talaos_inventory.models.assets as assets
 from lxml import objectify
+from eve.methods.post import post_internal
 
 
 class Inventory():
@@ -47,12 +48,12 @@ class Inventory():
                     property_name_ids.append(property_name.id)
                 else:
                     search_asset_property = False
-                    propertyname = assets.PropertyName()
-                    propertyname.name=name
-                    propertyname.asset_type_property_id=self.mapping_local_inventory[data.tag][v.tag]
-                    self.db.session.add(propertyname)
-                    self.db.session.commit()
-                    property_name_ids.append(propertyname.id)
+                    input = {
+                        'name': name,
+                        'asset_type_property_id': self.mapping_local_inventory[data.tag][v.tag]
+                    }
+                    propertyname = post_internal('property_name', input)
+                    property_name_ids.append(propertyname[0]['_id'])
             if search_asset_property:
                 prepQuery = self.db.session.query(
                     assets.AssetProperty
@@ -69,17 +70,17 @@ class Inventory():
                     return db_values.asset_id
             # if we are here, we must add new asset
             print('Create new asset ' + data.tag)
-            asset = assets.Asset()
-            asset.asset_type_id = self.mapping_asset_type[data.tag]
-            self.db.session.add(asset)
-            self.db.session.commit()
-            asset_id = asset.id
+            input = {
+                'asset_type_id': self.mapping_asset_type[data.tag]
+            }
+            asset = post_internal('asset', input)
+            asset_id = asset[0]['_id']
             for id in property_name_ids:
-                assetproperty = assets.AssetProperty()
-                assetproperty.asset_id = asset_id
-                assetproperty.property_name_id = id
-                self.db.session.add(assetproperty)
-                self.db.session.commit()
+                input = {
+                    'asset_id': asset_id,
+                    'property_name_id': id
+                }
+                post_internal('asset_property', input)
             return asset_id
         return 0
 
@@ -94,11 +95,11 @@ class Inventory():
         children = [r[0] for r in db_values]
         for id in children_ids:
             if not id in children:
-                asset_asset = assets.AssetAsset()
-                asset_asset.asset_left = parent_id
-                asset_asset.asset_right = id
-                self.db.session.add(asset_asset)
-                self.db.session.commit()
+                input = {
+                    'asset_left': parent_id,
+                    'asset_right': id
+                }
+                post_internal('asset_asset', input)
 
     def get_settings_from_ini(self, db):
         self.db = db
