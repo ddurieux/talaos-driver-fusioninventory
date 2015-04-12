@@ -3,6 +3,7 @@ from lxml import etree, objectify
 from talaos_driver_fusioninventory.inventory import Inventory
 import zlib
 import gzip
+import xmltodict
 
 
 class Communication():
@@ -19,7 +20,8 @@ class Communication():
                 return etree.tostring(reply, pretty_print=True)
             elif xml_request.QUERY == 'INVENTORY':
                 # Inject inventory xml_request.CONTENT
-                inv.parse_inventory(xml_request.CONTENT)
+                inventory = xmltodict.parse(data)
+                inv.parse_inventory(inventory['REQUEST']['CONTENT'])
                 em = objectify.ElementMaker(annotate=False)
                 reply = em.REPLY()
                 return etree.tostring(reply, pretty_print=True)
@@ -34,6 +36,8 @@ class Communication():
         elif request.headers['Content-Type'] == 'application/x-compress-gzip':
             xml = gzip.decompress(xmlcompressed)
         elif request.headers['Content-Type'] == 'application/xml':
+            xml = xmlcompressed
+        else:
             xml = xmlcompressed
         return xml
 
