@@ -1,6 +1,5 @@
 from flask import make_response, request, abort
 from lxml import etree, objectify
-from talaos_driver_fusioninventory.inventory import Inventory
 import zlib
 import gzip
 import xmltodict

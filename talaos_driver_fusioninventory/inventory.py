@@ -41,7 +41,7 @@ class Inventory():
         ).all()
         properties = {}
         for i, (asset_id, property_name_id) in enumerate(db_values):
-            if not asset_id in properties:
+            if asset_id not in properties:
                 properties[asset_id] = set()
             properties[asset_id].add(property_name_id)
 
@@ -50,9 +50,17 @@ class Inventory():
         for item in data:
             if type(data[item]) is list:
                 for dataitem in data[item]:
-                    assets_id.append(self.add_asset(dataitem, item, properties))
+                    assets_id.append(
+                        self.add_asset(
+                            dataitem, item, properties
+                        )
+                    )
             else:
-                assets_id.append(self.add_asset(data[item], item, properties))
+                assets_id.append(
+                    self.add_asset(
+                        data[item], item, properties
+                    )
+                )
         for i in assets_id:
             if i > 0 and i not in assets_ids:
                 assets_ids.append(i)
@@ -73,10 +81,13 @@ class Inventory():
             prop = {}
             for name in data:
                 if name in self.mapping_local_inventory[nodename]:
-                    value = (str(data[name])[:250]) if len(str(data[name])) > 250 else str(data[name])
+                    value = str(data[name])
+                    if len(value) > 250:
+                        value = str(data[name])[:250]
                     clauses.append(and_(
                         assets.PropertyName.name == value,
-                        assets.PropertyName.asset_type_property_id == self.mapping_local_inventory[nodename][name]
+                        assets.PropertyName.asset_type_property_id == self.
+                        mapping_local_inventory[nodename][name]
                     ))
                     prop[self.mapping_local_inventory[nodename][name]] = value
 
@@ -129,12 +140,15 @@ class Inventory():
             properties = {}
             for name in data:
                 if name in self.mapping_local_inventory[nodename]:
-                    value = (str(data[name])[:250]) if len(str(data[name])) > 250 else str(data[name])
+                    value = str(data[name])
+                    if len(value) > 250:
+                        value = str(data[name])[:250]
+                    key = self.mapping_local_inventory[nodename][name]
                     clauses.append(and_(
                         assets.PropertyName.name == value,
-                        assets.PropertyName.asset_type_property_id == self.mapping_local_inventory[nodename][name]
+                        assets.PropertyName.asset_type_property_id == key
                     ))
-                    properties[self.mapping_local_inventory[nodename][name]] = value
+                    properties[key] = value
 
             property_name_bis = property_name_bis.filter(or_(*clauses))
             property_name_db = property_name_bis.all()
@@ -164,14 +178,15 @@ class Inventory():
                             assets.AssetProperty.property_name_id == id
                         ))
                     else:
-                        args[(i-1)] = args[(i-1)].subquery()
+                        args[(i - 1)] = args[(i - 1)].subquery()
 
                         args.append(self.db.session.query(
                             assets.AssetProperty
                         ).with_entities(
                             assets.AssetProperty.asset_id,
                         ).filter(
-                            assets.AssetProperty.asset_id == args[(i-1)].c.asset_id,
+                            assets.AssetProperty.asset_id == args[(i - 1)].
+                            c.asset_id,
                             assets.AssetProperty.property_name_id == id
                         ))
                     i = i + 1
@@ -202,7 +217,7 @@ class Inventory():
         db_values = prepQuery.all()
         children = [r[0] for r in db_values]
         for id in children_ids:
-            if not id in children:
+            if id not in children:
                 input = {
                     'asset_left': parent_id,
                     'asset_right': id
@@ -211,7 +226,6 @@ class Inventory():
 
     def get_settings_from_ini(self, db):
         self.db = db
-        settings = {}
         settings_filenames = [
             '/etc/talaos_inventory/driver_fusioninventory.ini',
             os.path.abspath('./driver_fusioninventory.ini')
@@ -255,11 +269,14 @@ class Inventory():
                     asset_type_id=self.mapping_asset_type[key]
                 ).first()
                 if asset_type_property is not None:
-                    self.mapping_local_inventory[key][prop] = asset_type_property.id
+                    self.mapping_local_inventory[key][prop] = \
+                        asset_type_property.id
                 else:
                     assettypeproperty = assets.AssetTypeProperty()
                     assettypeproperty.name = data[key][prop]
-                    assettypeproperty.asset_type_id = self.mapping_asset_type[key]
+                    assettypeproperty.asset_type_id = \
+                        self.mapping_asset_type[key]
                     db.session.add(assettypeproperty)
                     db.session.commit()
-                    self.mapping_local_inventory[key][prop] = assettypeproperty.id
+                    self.mapping_local_inventory[key][prop] = \
+                        assettypeproperty.id
