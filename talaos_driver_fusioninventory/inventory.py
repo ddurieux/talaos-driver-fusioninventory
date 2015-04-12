@@ -14,29 +14,108 @@ class Inventory():
         parse inventory and insert into db
         '''
         start_time = time.time()
-        assets_ids = []
-        assets_id = []
-        for item in data:
-            if type(data[item]) is list:
-                for dataitem in data[item]:
-                    assets_id.append(self.add_asset(dataitem, item))
-            else:
-                assets_id.append(self.add_asset(data[item], item))
-        for i in assets_id:
-            if i > 0 and i not in assets_ids:
-                assets_ids.append(i)
         # add computer asset
         computer = {}
         computer['serialnumber'] = data['BIOS']['SSN']
         computer['uuid'] = data['HARDWARE']['UUID']
         computer['manufacturer'] = data['BIOS']['SMANUFACTURER']
         computer['name'] = data['HARDWARE']['NAME']
-        asset_id = self.add_asset(computer, 'COMPUTER')
+        asset_id = self.add_asset_parent(computer, 'COMPUTER')
+
+        db_values = self.db.session.query(
+            assets.AssetAsset
+        ).with_entities(
+            assets.AssetAsset.asset_right
+        ).filter(
+            assets.AssetAsset.asset_left == asset_id
+        ).all()
+        assets_db = [r[0] for r in db_values]
+
+        db_values = self.db.session.query(
+            assets.AssetProperty
+        ).with_entities(
+            assets.AssetProperty.asset_id,
+            assets.AssetProperty.property_name_id
+        ).filter(
+            assets.AssetProperty.asset_id.in_(assets_db)
+        ).all()
+        properties = {}
+        for i, (asset_id, property_name_id) in enumerate(db_values):
+            if not asset_id in properties:
+                properties[asset_id] = set()
+            properties[asset_id].add(property_name_id)
+
+        assets_ids = []
+        assets_id = []
+        for item in data:
+            if type(data[item]) is list:
+                for dataitem in data[item]:
+                    assets_id.append(self.add_asset(dataitem, item, properties))
+            else:
+                assets_id.append(self.add_asset(data[item], item, properties))
+        for i in assets_id:
+            if i > 0 and i not in assets_ids:
+                assets_ids.append(i)
         # link assets to this computer asset
         self.parent_links(asset_id, assets_ids)
         print("--- %s seconds ---" % (time.time() - start_time))
 
-    def add_asset(self, data, nodename):
+    def add_asset(self, data, nodename, properties):
+        if nodename in self.mapping_local_inventory:
+            property_name_ids = set()
+            property_name_bis = self.db.session.query(
+                assets.PropertyName
+            ).with_entities(
+                assets.PropertyName.id,
+                assets.PropertyName.asset_type_property_id
+            )
+            clauses = []
+            prop = {}
+            for name in data:
+                if name in self.mapping_local_inventory[nodename]:
+                    value = (str(data[name])[:250]) if len(str(data[name])) > 250 else str(data[name])
+                    clauses.append(and_(
+                        assets.PropertyName.name == value,
+                        assets.PropertyName.asset_type_property_id == self.mapping_local_inventory[nodename][name]
+                    ))
+                    prop[self.mapping_local_inventory[nodename][name]] = value
+
+            property_name_bis = property_name_bis.filter(or_(*clauses))
+            property_name_db = property_name_bis.all()
+            for i, (id, atp_id) in enumerate(property_name_db):
+                if atp_id in prop:
+                    property_name_ids.add(id)
+                    del prop[atp_id]
+            if len(prop) == 0:
+                for asset_id in properties:
+                    if properties[asset_id] == property_name_ids:
+                        del properties[asset_id]
+                        return asset_id
+
+            for id in prop:
+                input = {
+                    'name': prop[id],
+                    'asset_type_property_id': id
+                }
+                propertyname = post_internal('property_name', input)
+                property_name_ids.add(propertyname[0]['_id'])
+
+            # if we are here, we must add new asset
+            input = {
+                'asset_type_id': self.mapping_asset_type[nodename]
+            }
+            asset = post_internal('asset', input)
+            asset_id = asset[0]['_id']
+            for id in property_name_ids:
+                input = {
+                    'asset_id': asset_id,
+                    'property_name_id': id
+                }
+                post_internal('asset_property', input)
+            return asset_id
+        return 0
+
+    def add_asset_parent(self, data, nodename):
         if nodename in self.mapping_local_inventory:
             property_name_ids = []
             search_asset_property = True
