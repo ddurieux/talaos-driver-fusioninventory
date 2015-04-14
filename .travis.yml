@@ -4,6 +4,8 @@ before_install:
  - git clone https://github.com/talaos/talaos-inventory.git
  - cd talaos-inventory
  - pip3 install .
+ - cd ..
+ - rm -fr talaos-inventory
 env:
   - TOX_ENV=py34
   - TOX_ENV=behave
