@@ -31,19 +31,20 @@ class Inventory():
         ).all()
         assets_db = [r[0] for r in db_values]
 
-        db_values = self.db.session.query(
-            assets.AssetProperty
-        ).with_entities(
-            assets.AssetProperty.asset_id,
-            assets.AssetProperty.property_name_id
-        ).filter(
-            assets.AssetProperty.asset_id.in_(assets_db)
-        ).all()
         properties = {}
-        for i, (asset_id, property_name_id) in enumerate(db_values):
-            if asset_id not in properties:
-                properties[asset_id] = set()
-            properties[asset_id].add(property_name_id)
+        if len(assets_db) > 0:
+            db_values = self.db.session.query(
+                assets.AssetProperty
+            ).with_entities(
+                assets.AssetProperty.asset_id,
+                assets.AssetProperty.property_name_id
+            ).filter(
+                assets.AssetProperty.asset_id.in_(assets_db)
+            ).all()
+            for i, (asset_id, property_name_id) in enumerate(db_values):
+                if asset_id not in properties:
+                    properties[asset_id] = set()
+                properties[asset_id].add(property_name_id)
 
         assets_ids = []
         assets_id = []
