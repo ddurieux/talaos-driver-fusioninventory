@@ -1,5 +1,9 @@
 language: python
 python: 3.4
+before_install:
+ - git clone https://github.com/talaos/talaos-inventory.git
+ - cd talaos-inventory
+ - pip3 install .
 env:
   - TOX_ENV=py34
   - TOX_ENV=behave
