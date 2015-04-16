@@ -236,7 +236,7 @@ class Inventory():
         self.db = db
         settings_filenames = [
             '/etc/talaos_inventory/driver_fusioninventory.ini',
-            os.path.abspath('./driver_fusioninventory.ini')
+            os.path.abspath('./docs/driver_fusioninventory.ini')
         ]
         # Define some variables available
         defaults = {
