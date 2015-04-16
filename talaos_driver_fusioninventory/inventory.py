@@ -29,22 +29,28 @@ class Inventory():
         ).filter(
             assets.AssetAsset.asset_left == asset_id
         ).all()
-        assets_db = [r[0] for r in db_values]
+        result_db = [r[0] for r in db_values]
+        # Split list to have less than 1000 elements for the next query
+        assets_db_sub = [result_db[i:i + 900] for i in range(
+            0,
+            len(result_db),
+            900)]
 
         properties = {}
-        if len(assets_db) > 0:
-            db_values = self.db.session.query(
-                assets.AssetProperty
-            ).with_entities(
-                assets.AssetProperty.asset_id,
-                assets.AssetProperty.property_name_id
-            ).filter(
-                assets.AssetProperty.asset_id.in_(assets_db)
-            ).all()
-            for i, (asset_id, property_name_id) in enumerate(db_values):
-                if asset_id not in properties:
-                    properties[asset_id] = set()
-                properties[asset_id].add(property_name_id)
+        if len(assets_db_sub) > 0:
+            for assets_db in assets_db_sub:
+                db_values = self.db.session.query(
+                    assets.AssetProperty
+                ).with_entities(
+                    assets.AssetProperty.asset_id,
+                    assets.AssetProperty.property_name_id
+                ).filter(
+                    assets.AssetProperty.asset_id.in_(assets_db)
+                ).all()
+                for i, (asset_id, property_name_id) in enumerate(db_values):
+                    if asset_id not in properties:
+                        properties[asset_id] = set()
+                    properties[asset_id].add(property_name_id)
 
         assets_ids = []
         assets_id = []
