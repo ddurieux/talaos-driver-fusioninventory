@@ -164,6 +164,7 @@ class Inventory():
                     'asset_type_property_id': id
                 }
                 propertyname = post_internal('property_name', input)
+                print(propertyname)
                 property_name_ids.append(propertyname[0]['_id'])
 
             if search_asset_property:

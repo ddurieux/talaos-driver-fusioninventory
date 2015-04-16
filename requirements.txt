@@ -1,2 +1,3 @@
 lxml
 xmltodict
+-e git+https://github.com/ddurieux/talaos-inventory.git@master+drivers#egg=TalaosInventory
