@@ -49,6 +49,12 @@ def step_impl(context, nb):
     assert_equals(context.result['_meta']['total'], nb)
 
 
+@when(u'I am looking for all assets in database')
+def step_impl(context):
+    response = context.client.get('/asset')
+    assert_equals(response.status_code, 200)
+    result = json.loads(response.data.decode())
+    context.result = result
 
 
 

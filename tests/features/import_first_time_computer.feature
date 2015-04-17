@@ -5,6 +5,9 @@ Feature: import a fusioninventory computer from XML
     And I import the xml file "portdavid.xml"
 
   Scenario: Import computer from XML
+        When I am looking for all assets in database
+        Then I must retrieve a list of "1964" asset
+
         When I am looking for asset types "computer"
         Then I must retrieve a list of "1" asset
 
